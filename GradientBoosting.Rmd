@@ -16,16 +16,19 @@ summary(data)
 
 
 ```{r}
-data <- data[, -which(names(data) == "Id")]
-#columns_to_keep <- colMeans(is.na(data)) <= 0.1
-#your_data_filtered <- data[, columns_to_keep]
+custom_threshold <- 0.1  #%
+data_filtered <- data[, colMeans(is.na(data)) <= custom_threshold]
+print(data_filtered)
+```
 
-num_samples = dim(data)[1]
+
+```{r}
+num_samples = dim(data_filtered)[1]
 sampling.rate = 0.8
 training <- sample(1:num_samples, sampling.rate * num_samples, replace=FALSE)
-trainingSet <- data[training, ]
+trainingSet <- data_filtered[training, ]
 testing <- setdiff(1:num_samples,training)
-testingSet <- data[testing, ]
+testingSet <- data_filtered[testing, ]
 
 trainingfeatures <- subset(trainingSet, select=c(-SalePrice))
 # Get the labels of the training set
@@ -33,21 +36,14 @@ traininglabels <- trainingSet$SalePrice
 # Get the features of the testing set
 testingfeatures <- subset(testingSet, select=c(-SalePrice))
 ```
+
+
 ```{r}
 
 
 ```
 
 ```{r}
-cv_results <- gbm(
-  formula = traininglabels ~ .,
-  distribution = "gaussian",
-  data = trainingfeatures,
-  n.trees = 500,  # Choose a large value
-  interaction.depth = 5,  # A reasonable starting point
-  shrinkage = 0.01,  # A small value
-  n.minobsinnode = 10,  # A reasonable starting point
-  cv.folds = 5,  # Choose an appropriate number of folds
-)
+
 ```
 
