@@ -20,6 +20,23 @@ custom_threshold <- 0.1  #%
 data_filtered <- data[, colMeans(is.na(data)) <= custom_threshold]
 print(data_filtered)
 ```
+```{r}
+# Assuming Sale_Price is a numeric variable in your data frame
+library(ggplot2)
+
+# Histogram
+ggplot(data_filtered, aes(x = SalePrice)) +
+  geom_histogram(binwidth = 50000, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Sale Price", x = "Sale Price", y = "Frequency")
+
+# Density plot
+ggplot(data_filtered, aes(x = SalePrice)) +
+  geom_density(fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Density Plot of Sale Price", x = "Sale Price", y = "Density")
+#SalePrice distribution is positively skewed => gamma
+
+data$SalePrice_log <- log1p(data$SalePrice)
+```
 
 
 ```{r}
@@ -40,7 +57,23 @@ testingfeatures <- subset(testingSet, select=c(-SalePrice))
 
 ```{r}
 
+```
 
+
+
+```{r}
+set.seed(123)
+
+# train GBM model
+gbm.fit <- gbm(
+  formula = data$SalePrice_log ~ .,
+  data = data_filtered,
+  distribution = "gaussian",
+  n.trees = 100,
+  interaction.depth = 3,
+  shrinkage = 0.01,
+  cv.folds = 5,
+  )  
 ```
 
 ```{r}
