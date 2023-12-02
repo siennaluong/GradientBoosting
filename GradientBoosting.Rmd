@@ -7,6 +7,7 @@ output: html_notebook
 library(gbm)
 
 data <- read.csv("train.csv")
+test_data <- read.csv("test.csv")
 
 head(data)
 
@@ -18,8 +19,18 @@ summary(data)
 ```{r}
 custom_threshold <- 0.1  #%
 data_filtered <- data[, colMeans(is.na(data)) <= custom_threshold]
+```
+
+```{r}
+categorical_columns <- sapply(data_filtered, is.factor)
+
+# Convert categorical columns to factors
+data_filtered[, categorical_columns] <- lapply(data_filtered[, categorical_columns], as.factor)
+
 print(data_filtered)
 ```
+
+
 ```{r}
 # Assuming Sale_Price is a numeric variable in your data frame
 library(ggplot2)
@@ -47,6 +58,7 @@ trainingSet <- data_filtered[training, ]
 testing <- setdiff(1:num_samples,training)
 testingSet <- data_filtered[testing, ]
 
+print(trainingSet)
 trainingfeatures <- subset(trainingSet, select=c(-SalePrice))
 # Get the labels of the training set
 traininglabels <- trainingSet$SalePrice
@@ -55,10 +67,15 @@ testingfeatures <- subset(testingSet, select=c(-SalePrice))
 ```
 
 
+
 ```{r}
+categorical_columns <- sapply(data_filtered, is.factor)
 
+# Convert categorical columns to factors
+data_filtered[, categorical_columns] <- lapply(data_filtered[, categorical_columns], as.factor)
+
+print(data_filtered)
 ```
-
 
 
 ```{r}
@@ -66,14 +83,16 @@ set.seed(123)
 
 # train GBM model
 gbm.fit <- gbm(
-  formula = data$SalePrice_log ~ .,
-  data = data_filtered,
+  formula = traininglabels ~ .,
+  data = trainingSet,
   distribution = "gaussian",
   n.trees = 100,
   interaction.depth = 3,
   shrinkage = 0.01,
   cv.folds = 5,
   )  
+
+
 ```
 
 ```{r}
