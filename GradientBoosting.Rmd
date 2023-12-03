@@ -8,6 +8,7 @@ library(gbm)
 
 data <- read.csv("train.csv")
 test_data <- read.csv("test.csv")
+res_data <- read.csv("sample_submission.csv")
 
 head(data)
 
@@ -22,12 +23,17 @@ data_filtered <- data[, colMeans(is.na(data)) <= custom_threshold]
 ```
 
 ```{r}
-categorical_columns <- sapply(data_filtered, is.factor)
+convertToFactors <- function(data) {
+  # Identify columns with categorical data
+  cat_columns <- sapply(data, function(col) is.factor(col) || is.character(col))
 
-# Convert categorical columns to factors
-data_filtered[, categorical_columns] <- lapply(data_filtered[, categorical_columns], as.factor)
+  # Convert identified columns to factors
+  data[, cat_columns] <- lapply(data[, cat_columns], as.factor)
 
-print(data_filtered)
+  return(data)
+}
+
+data_factor = convertToFactors(data_filtered)
 ```
 
 
@@ -46,36 +52,29 @@ ggplot(data_filtered, aes(x = SalePrice)) +
   labs(title = "Density Plot of Sale Price", x = "Sale Price", y = "Density")
 #SalePrice distribution is positively skewed => gamma
 
-data$SalePrice_log <- log1p(data$SalePrice)
+data_factor$SalePrice_log <- log1p(data_factor$SalePrice)
 ```
 
 
 ```{r}
-num_samples = dim(data_filtered)[1]
+num_samples = dim(data_factor)[1]
 sampling.rate = 0.8
 training <- sample(1:num_samples, sampling.rate * num_samples, replace=FALSE)
-trainingSet <- data_filtered[training, ]
+trainingSet <- data_factor[training, ]
 testing <- setdiff(1:num_samples,training)
-testingSet <- data_filtered[testing, ]
+testingSet <- data_factor[testing, ]
 
 print(trainingSet)
-trainingfeatures <- subset(trainingSet, select=c(-SalePrice))
+trainingfeatures <- subset(trainingSet, select=-c(SalePrice, SalePrice_log))
 # Get the labels of the training set
-traininglabels <- trainingSet$SalePrice
+traininglabels <- trainingSet$SalePrice_log
 # Get the features of the testing set
-testingfeatures <- subset(testingSet, select=c(-SalePrice))
+testingfeatures <- subset(testingSet, select = -c(SalePrice, SalePrice_log))
 ```
 
 
 
-```{r}
-categorical_columns <- sapply(data_filtered, is.factor)
 
-# Convert categorical columns to factors
-data_filtered[, categorical_columns] <- lapply(data_filtered[, categorical_columns], as.factor)
-
-print(data_filtered)
-```
 
 
 ```{r}
@@ -83,7 +82,7 @@ set.seed(123)
 
 # train GBM model
 gbm.fit <- gbm(
-  formula = traininglabels ~ .,
+  formula = traininglabels ~ . - (SalePrice+SalePrice_log+Id+Utilities),
   data = trainingSet,
   distribution = "gaussian",
   n.trees = 100,
@@ -96,6 +95,30 @@ gbm.fit <- gbm(
 ```
 
 ```{r}
+prediction <- predict(gbm.fit, testingSet)
+error = expm1(prediction) - (testingSet$SalePrice)
+mse = mean(error^2)
+print(sqrt(mse))
+```
 
+```{r}
+custom_threshold <- 0.1  #%
+test_filtered <- test_data[, colMeans(is.na(test_data)) <= custom_threshold]
+
+convertToFactors <- function(data) {
+  # Identify columns with categorical data
+  cat_columns <- sapply(data, function(col) is.factor(col) || is.character(col))
+
+  # Convert identified columns to factors
+  data[, cat_columns] <- lapply(data[, cat_columns], as.factor)
+
+  return(data)
+}
+
+data_factor = convertToFactors(test_filtered)
+
+prediction2 <- predict(gbm.fit, test_filtered)
+error2 = expm1(prediction2)-res_data$SalePrice
+print(sqrt(mean(error2^2)))
 ```
 
