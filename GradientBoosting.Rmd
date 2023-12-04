@@ -15,8 +15,6 @@ head(data)
 summary(data)
 ```
 
-
-
 ```{r}
 custom_threshold <- 0.1  #%
 data_filtered <- data[, colMeans(is.na(data)) <= custom_threshold]
@@ -29,7 +27,7 @@ convertToFactors <- function(data) {
 
   # Convert identified columns to factors
   data[, cat_columns] <- lapply(data[, cat_columns], as.factor)
-
+  
   return(data)
 }
 
@@ -52,7 +50,7 @@ ggplot(data_filtered, aes(x = SalePrice)) +
   labs(title = "Density Plot of Sale Price", x = "Sale Price", y = "Density")
 #SalePrice distribution is positively skewed => gamma
 
-data_factor$SalePrice_log <- log1p(data_factor$SalePrice)
+#data_factor$SalePrice_log <- log1p(data_factor$SalePrice)
 ```
 
 
@@ -65,11 +63,12 @@ testing <- setdiff(1:num_samples,training)
 testingSet <- data_factor[testing, ]
 
 print(trainingSet)
-trainingfeatures <- subset(trainingSet, select=-c(SalePrice, SalePrice_log))
+trainingfeatures <- subset(trainingSet, select=-c(SalePrice))
+print
 # Get the labels of the training set
-traininglabels <- trainingSet$SalePrice_log
+traininglabels <- trainingSet$SalePrice
 # Get the features of the testing set
-testingfeatures <- subset(testingSet, select = -c(SalePrice, SalePrice_log))
+testingfeatures <- subset(testingSet, select = -c(SalePrice))
 ```
 
 
@@ -82,22 +81,25 @@ set.seed(123)
 
 # train GBM model
 gbm.fit <- gbm(
-  formula = traininglabels ~ . - (SalePrice+SalePrice_log+Id+Utilities),
+  formula = traininglabels ~ . -c(SalePrice),
   data = trainingSet,
   distribution = "gaussian",
-  n.trees = 100,
+  n.trees = 5000,
+  shrinkage = 0.1,
   interaction.depth = 3,
-  shrinkage = 0.01,
-  cv.folds = 5,
+  n.minobsinnode = 10,
+  cv.folds = 10
   )  
 
+best <- which.min(gbm.fit$cv.error)
 
 ```
 
 ```{r}
 prediction <- predict(gbm.fit, testingSet)
-error = expm1(prediction) - (testingSet$SalePrice)
+error = prediction - (testingSet$SalePrice)
 mse = mean(error^2)
+print(mse)
 print(sqrt(mse))
 ```
 
@@ -117,8 +119,8 @@ convertToFactors <- function(data) {
 
 data_factor = convertToFactors(test_filtered)
 
-prediction2 <- predict(gbm.fit, test_filtered)
-error2 = expm1(prediction2)-res_data$SalePrice
+prediction2 <- predict(gbm.fit, data_factor)
+#error2 = prediction2-res_data$SalePrice
 print(sqrt(mean(error2^2)))
 ```
 
